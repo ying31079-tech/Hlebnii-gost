@@ -1,0 +1,303 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bread Monster Survival - Rare Izlom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #000; color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .video-bg, .img-bg {
+            position: fixed; right: 0; bottom: 0;
+            min-width: 100%; min-height: 100%;
+            z-index: -1; object-fit: cover;
+        }
+        /* Главный фон меню теперь всегда ваше фото */
+        .img-bg-menu {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('Gemini_Generated_Image_phkqpdphkqpdphkq.png');
+            background-size: cover; background-position: center;
+            z-index: -2;
+        }
+        .ui-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; background: rgba(0, 0, 0, 0.5);
+        }
+        .game-terminal {
+            background: rgba(10, 10, 10, 0.95);
+            border: 2px solid #222; padding: 30px;
+            width: 95%; max-width: 1000px; min-height: 550px;
+            display: none; flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+        .btn {
+            background: #111; border: 1px solid #333;
+            padding: 12px 24px; margin: 6px; cursor: pointer;
+            transition: all 0.2s; text-transform: uppercase;
+            font-weight: bold; color: #aaa;
+        }
+        .btn:hover {
+            background: #222; border-color: #f00; color: #fff;
+        }
+        .portrait {
+            width: 350px; height: 450px; border: 2px solid #111;
+            background-size: cover; background-position: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #intro-video-container {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: #000; z-index: 100;
+        }
+        .stat-panel {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0,0,0,0.9); padding: 20px;
+            border-left: 4px solid #f00; z-index: 50;
+        }
+        .death-bg { background-size: cover; background-position: center; }
+        .hidden { display: none; }
+        .shake { animation: shake 0.3s infinite; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px); }
+            50% { transform: translate(-2px, -1px); }
+            100% { transform: translate(1px, 1px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Звуки -->
+    <audio id="bgm-menu" loop>
+        <source src="Сталкер 2 - музыка из игры - музыка из игры сталкер_(mp3find.ru).mp3" type="audio/mpeg">
+    </audio>
+    <audio id="bgm-game" loop>
+        <source src="analog_mannequin_-_Milk_Cassette_Xmp3_73690486.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Главное меню -->
+    <div id="menu" class="ui-overlay">
+        <div class="img-bg-menu"></div>
+        <video class="video-bg" autoplay muted loop style="opacity: 0.4;">
+            <source src="2_5240143908263991677.mp4" type="video/mp4">
+        </video>
+        <h1 class="text-7xl font-black mb-2 text-red-700 tracking-tighter italic uppercase text-center">BREAD HUNGER</h1>
+        <p class="mb-12 text-gray-400 tracking-widest text-sm uppercase">Монстр маскируется под гостей.</p>
+        <button class="btn text-4xl px-16 py-8 border-red-900 shadow-lg shadow-red-900/20" onclick="startIntro()">Начать выживание</button>
+    </div>
+
+    <!-- Интро -->
+    <div id="intro-video-container">
+        <video id="intro-video" class="w-full h-full object-cover">
+            <source src="2_5240143908263991682.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- Игровой интерфейс -->
+    <div id="game-ui" class="ui-overlay hidden">
+        <div class="stat-panel">
+            <div class="text-xs text-gray-500 uppercase">Ночь</div>
+            <div class="text-4xl font-bold text-white mb-2" id="day-num">1</div>
+            <div class="text-xs text-gray-500 uppercase">Оборона дома:</div>
+            <div id="home-status" class="text-green-600 font-bold uppercase tracking-tighter text-lg">БЕЗЗАЩИТЕН</div>
+        </div>
+
+        <div id="terminal" class="game-terminal">
+            <div class="flex flex-col md:flex-row gap-8">
+                <div id="guest-portrait" class="portrait flex-shrink-0"></div>
+                <div class="flex flex-col justify-between py-2">
+                    <div>
+                        <div class="text-red-700 text-xs font-bold uppercase mb-4 tracking-widest">Проверка личности</div>
+                        <div id="dialogue-text" class="text-2xl leading-relaxed text-gray-100 italic"></div>
+                    </div>
+                    <div id="options" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран смерти -->
+    <div id="death-screen" class="ui-overlay hidden death-bg">
+        <div class="bg-black bg-opacity-90 p-12 text-center border-4 border-red-700 shake">
+            <h1 class="text-8xl font-black mb-4 text-red-700 uppercase">КОНЕЦ</h1>
+            <p id="death-reason" class="text-2xl mb-12 text-white font-bold"></p>
+            <button class="btn bg-red-950 text-white px-10 py-4" onclick="location.reload()">ПЕРЕЗАГРУЗКА</button>
+        </div>
+    </div>
+
+    <script>
+        const menu = document.getElementById('menu');
+        const gameUI = document.getElementById('game-ui');
+        const introContainer = document.getElementById('intro-video-container');
+        const introVideo = document.getElementById('intro-video');
+        const bgmMenu = document.getElementById('bgm-menu');
+        const bgmGame = document.getElementById('bgm-game');
+        
+        const dialogueText = document.getElementById('dialogue-text');
+        const optionsContainer = document.getElementById('options');
+        const portrait = document.getElementById('guest-portrait');
+        const homeStatus = document.getElementById('home-status');
+        const dayDisplay = document.getElementById('day-num');
+        const deathScreen = document.getElementById('death-screen');
+
+        let currentDay = 1;
+        let isHomeOccupied = false;
+        let guestQueue = [];
+        let currentGuest = null;
+
+        window.addEventListener('mousedown', () => {
+            if (bgmMenu.paused && gameUI.classList.contains('hidden')) {
+                bgmMenu.play().catch(() => {});
+            }
+        }, { once: true });
+
+        function startIntro() {
+            menu.classList.add('hidden');
+            introContainer.style.display = 'block';
+            bgmMenu.pause();
+            introVideo.play();
+            introVideo.onended = startGame;
+        }
+
+        function startGame() {
+            introContainer.style.display = 'none';
+            gameUI.classList.remove('hidden');
+            document.getElementById('terminal').style.display = 'flex';
+            bgmGame.play();
+            initQueue();
+            spawnGuest();
+        }
+
+        function showDeath(reason, image) {
+            gameUI.classList.add('hidden');
+            deathScreen.classList.remove('hidden');
+            deathScreen.style.backgroundImage = `url('${image}')`;
+            document.getElementById('death-reason').innerText = reason;
+            bgmGame.pause();
+        }
+
+        const GUESTS_DB = [
+            {
+                id: 'h1', isMonster: false, imgBase: 'Gemini_Generated_Image_hs6fgkhs6fgkhs6f.png',
+                imgHands: 'Gemini_Generated_Image_hej1oihej1oihej1.png',
+                imgHat: 'Gemini_Generated_Image_dcsp14dcsp14dcsp.png',
+                text: '"Впусти, я замерз! Шапку снять? Руки показать? Пожалуйста!"', checks: ['hands', 'hat']
+            },
+            {
+                id: 'm_glasses', isMonster: true, imgBase: 'Gemini_Generated_Image_zhviwwzhviwwzhvi.png',
+                imgAlt: 'Gemini_Generated_Image_s1a9fts1a9fts1a9.png', imgDeath: 'Gemini_Generated_Image_pz6kztpz6kztpz6k.png',
+                text: '"Пусти погреться. Очки не сниму — глаза очень чувствительны к свету..."', checks: ['glasses']
+            },
+            { id: 'h_girl', isMonster: false, imgBase: '1776671697469.png', text: '"Помогите... Я совсем одна осталась."', checks: [] },
+            { id: 'm_woman', isMonster: true, imgBase: '1776672510112.png', imgDeath: '1776636708526.png', text: '"Здравствуй. Пустите женщину передохнуть? Я принесла еды."', checks: [] },
+            { id: 'h_gnome', isMonster: false, imgBase: '1776672616935.png', text: '"Хозяин! Гном из пещер просит приюта на одну ночь!"', checks: [] },
+            { id: 'm_thin', isMonster: true, imgBase: '1776672891700.png', imgDeath: '1776636852517.png', text: '"П-п-пусти... Я... с-совсем слаб..."', checks: [] },
+            { id: 'h_old', isMonster: false, imgBase: '1776671492652.png', text: '"Здорово! Беззубый дед пришел. Зубов нет — кусать нечем, хе-хе!"', checks: [] },
+            { id: 'h_buff', isMonster: false, imgBase: '1776671377057.png', text: '"Йоу! Крепкий парень на вписку нужен? Помогу обороняться."', checks: [] },
+            { id: 'm_granny_1', isMonster: true, imgBase: '1776636123150.png', imgDeath: '1776636217836.png', text: '"Впусти бабушку, милый. У меня батон свежий есть..."', checks: [] },
+            { id: 'h_soldier', isMonster: false, imgBase: '1776637322788.png', text: '"Сержант Петренко. Запрашиваю разрешение войти. Нужно патроны пересчитать."', checks: [] }
+        ];
+
+        function initQueue() {
+            guestQueue = [...GUESTS_DB].sort(() => Math.random() - 0.5);
+        }
+
+        function spawnGuest() {
+            // Проверка Излома: теперь строго каждую четвертую ночь (4, 8, 12...)
+            if (currentDay % 4 === 0) {
+                checkIzlom();
+                return;
+            }
+
+            if (guestQueue.length === 0) initQueue();
+            currentGuest = guestQueue.pop();
+            
+            showStep(currentGuest.text, currentGuest.imgBase, getOptionsForGuest(currentGuest));
+        }
+
+        function getOptionsForGuest(guest) {
+            let opts = [{ text: "Впустить", action: "accept" }];
+            if (guest.checks.includes('hands')) opts.push({ text: "Покажи руки", action: "checkHands" });
+            if (guest.checks.includes('hat')) opts.push({ text: "Сними шапку", action: "checkHat" });
+            if (guest.checks.includes('glasses')) opts.push({ text: "Сними очки", action: "checkGlasses" });
+            opts.push({ text: "Прогнать", action: "reject" });
+            return opts;
+        }
+
+        function showStep(text, img, options) {
+            dialogueText.innerText = text;
+            portrait.style.backgroundImage = `url('${img}')`;
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.innerText = opt.text;
+                b.onclick = () => handleAction(opt.action);
+                optionsContainer.appendChild(b);
+            });
+        }
+
+        function handleAction(action) {
+            if (action === 'accept') {
+                if (currentGuest.isMonster) {
+                    showDeath("Вы впустили монстра. Он перегрыз вам горло, пока вы закрывали дверь.", currentGuest.imgDeath);
+                } else {
+                    isHomeOccupied = true;
+                    homeStatus.innerText = "ГОСТЬ ВНУТРИ";
+                    homeStatus.className = "text-blue-500 font-bold";
+                    nextDay();
+                }
+            } else if (action === 'reject') {
+                isHomeOccupied = false;
+                homeStatus.innerText = "БЕЗЗАЩИТЕН";
+                homeStatus.className = "text-green-600 font-bold";
+                nextDay();
+            } else if (action.startsWith('check')) {
+                let img = currentGuest.imgBase;
+                if (action === 'checkHands') img = currentGuest.imgHands;
+                if (action === 'checkHat') img = currentGuest.imgHat;
+                if (action === 'checkGlasses') img = currentGuest.imgAlt;
+                
+                showStep("Ты все увидел? Теперь пустишь?", img, [
+                    { text: "Впустить", action: "accept" },
+                    { text: "Все равно уходи", action: "reject" }
+                ]);
+            }
+        }
+
+        function nextDay() {
+            currentDay++;
+            dayDisplay.innerText = currentDay;
+            setTimeout(spawnGuest, 800);
+        }
+
+        function checkIzlom() {
+            dialogueText.innerText = "Наступила четвертая ночь... Излом рыщет у дверей...";
+            portrait.style.backgroundImage = "url('Gemini_Generated_Image_fge9kxfge9kxfge9.png')";
+            optionsContainer.innerHTML = '<div class="text-red-700 font-black text-5xl animate-pulse">ИЗЛОМ У ДВЕРИ</div>';
+
+            setTimeout(() => {
+                if (isHomeOccupied) {
+                    dialogueText.innerText = "Излом учуял запах двух людей. Он не рискнул зайти и скрылся в тумане до следующего цикла.";
+                    isHomeOccupied = false;
+                    homeStatus.innerText = "БЕЗЗАЩИТЕН";
+                    const b = document.createElement('button');
+                    b.className = 'btn border-green-600';
+                    b.innerText = "Дожить до рассвета";
+                    b.onclick = nextDay;
+                    optionsContainer.innerHTML = '';
+                    optionsContainer.appendChild(b);
+                } else {
+                    showDeath("Излом зашел в тихий дом. Некому было помочь тебе отбиться.", "1771547396165.png");
+                }
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
+
+```
