@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bread Hunger: Extended Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #000; color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .img-bg-menu {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('Gemini_Generated_Image_phkqpdphkqpdphkq.png');
+            background-size: cover; background-position: center;
+            z-index: -2;
+        }
+        .video-bg {
+            position: fixed; right: 0; bottom: 0;
+            min-width: 100%; min-height: 100%;
+            z-index: -1; object-fit: cover;
+            opacity: 0.3;
+        }
+        .ui-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; background: rgba(0, 0, 0, 0.6);
+        }
+        .game-terminal {
+            background: rgba(10, 10, 10, 0.98);
+            border: 2px solid #333; padding: 30px;
+            width: 95%; max-width: 1100px; min-height: 580px;
+            display: none; flex-direction: column;
+            box-shadow: 0 0 60px rgba(0,0,0,1);
+            border-radius: 4px;
+        }
+        .btn {
+            background: #0a0a0a; border: 1px solid #444;
+            padding: 14px 28px; margin: 6px; cursor: pointer;
+            transition: all 0.2s; text-transform: uppercase;
+            font-weight: bold; color: #999;
+            font-size: 0.9rem;
+        }
+        .btn:hover {
+            background: #1a1a1a; border-color: #ff0000; color: #fff;
+            box-shadow: 0 0 15px rgba(255,0,0,0.2);
+        }
+        .portrait {
+            width: 380px; height: 480px; border: 2px solid #222;
+            background-size: cover; background-position: center;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        #intro-video-container {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: #000; z-index: 100;
+        }
+        .stat-panel {
+            position: absolute; top: 30px; left: 30px;
+            background: rgba(0,0,0,0.95); padding: 25px;
+            border-left: 5px solid #cc0000; z-index: 50;
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+        }
+        .death-bg { background-size: cover; background-position: center; }
+        .shake { animation: shake 0.4s infinite; }
+        @keyframes shake {
+            0% { transform: translate(2px, 1px); }
+            20% { transform: translate(-3px, -2px); }
+            40% { transform: translate(3px, 2px); }
+            60% { transform: translate(-3px, 1px); }
+            80% { transform: translate(3px, -1px); }
+            100% { transform: translate(1px, -2px); }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bgm-menu" loop>
+        <source src="Сталкер 2 - музыка из игры - музыка из игры сталкер_(mp3find.ru).mp3" type="audio/mpeg">
+    </audio>
+    <audio id="bgm-game" loop>
+        <source src="analog_mannequin_-_Milk_Cassette_Xmp3_73690486.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="menu" class="ui-overlay">
+        <div class="img-bg-menu"></div>
+        <video class="video-bg" autoplay muted loop>
+            <source src="2_5240143908263991677.mp4" type="video/mp4">
+        </video>
+        <h1 class="text-8xl font-black mb-4 text-red-700 tracking-tighter italic uppercase text-center drop-shadow-2xl">BREAD HUNGER</h1>
+        <p class="mb-14 text-gray-400 tracking-[0.3em] text-sm uppercase font-bold">монстр маскируется под гостей</p>
+        <button class="btn text-4xl px-20 py-10 border-red-900 bg-black/80 hover:bg-red-900/20 transition-all" onclick="startIntro()">НАЧАТЬ</button>
+    </div>
+
+    <div id="intro-video-container">
+        <video id="intro-video" class="w-full h-full object-cover">
+            <source src="2_5240143908263991682.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-ui" class="hidden ui-overlay">
+        <div class="stat-panel">
+            <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">Фаза</div>
+            <div class="text-5xl font-black text-white mb-4">НОЧЬ <span id="day-num">1</span></div>
+            <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">Статус защиты</div>
+            <div id="home-status" class="text-green-600 font-bold text-xl uppercase italic">ОДИНОЧЕСТВО</div>
+        </div>
+
+        <div id="terminal" class="game-terminal">
+            <div class="flex flex-col md:flex-row gap-10">
+                <div id="guest-portrait" class="portrait flex-shrink-0"></div>
+                <div class="flex flex-col justify-between py-4 w-full">
+                    <div>
+                        <div class="text-red-700 text-xs font-black uppercase mb-6 tracking-[0.4em] border-b border-red-900/30 pb-2">Сканирование цели</div>
+                        <div id="dialogue-text" class="text-3xl leading-snug text-gray-100 font-medium"></div>
+                    </div>
+                    <div id="options" class="flex flex-wrap gap-3 mt-8"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="death-screen" class="hidden ui-overlay death-bg">
+        <div class="bg-black/95 p-16 text-center border-y-8 border-red-700 shake w-full">
+            <h1 class="text-9xl font-black mb-6 text-red-700 uppercase italic">ТЫ МЕРТВ</h1>
+            <p id="death-reason" class="text-3xl mb-12 text-white max-w-4xl mx-auto leading-relaxed"></p>
+            <button class="btn bg-red-900 text-white px-24 py-8 text-2xl hover:bg-red-700" onclick="location.reload()">ЗАНОВО</button>
+        </div>
+    </div>
+
+    <script>
+        const menu = document.getElementById('menu');
+        const gameUI = document.getElementById('game-ui');
+        const introContainer = document.getElementById('intro-video-container');
+        const introVideo = document.getElementById('intro-video');
+        const bgmMenu = document.getElementById('bgm-menu');
+        const bgmGame = document.getElementById('bgm-game');
+        const dialogueText = document.getElementById('dialogue-text');
+        const optionsContainer = document.getElementById('options');
+        const portrait = document.getElementById('guest-portrait');
+        const homeStatus = document.getElementById('home-status');
+        const dayDisplay = document.getElementById('day-num');
+        const deathScreen = document.getElementById('death-screen');
+
+        let currentDay = 1;
+        let isHomeOccupied = false;
+        let guestQueue = [];
+        let currentGuest = null;
+
+        window.addEventListener('mousedown', () => {
+            if (bgmMenu.paused && gameUI.classList.contains('hidden')) {
+                bgmMenu.play().catch(() => {});
+            }
+        }, { once: true });
+
+        function startIntro() {
+            menu.classList.add('hidden');
+            introContainer.style.display = 'block';
+            bgmMenu.pause();
+            introVideo.play();
+            introVideo.onended = startGame;
+        }
+
+        function startGame() {
+            introContainer.style.display = 'none';
+            gameUI.classList.remove('hidden');
+            document.getElementById('terminal').style.display = 'flex';
+            bgmGame.play();
+            initQueue();
+            spawnGuest();
+        }
+
+        function showDeath(reason, image) {
+            gameUI.classList.add('hidden');
+            deathScreen.classList.remove('hidden');
+            deathScreen.style.backgroundImage = `url('${image}')`;
+            document.getElementById('death-reason').innerText = reason;
+            bgmGame.pause();
+        }
+
+        // ПОЛНЫЙ СПИСОК ВСЕХ ПЕРСОНАЖЕЙ
+        const GUESTS_DB = [
+            // Новые
+            { id: 'm_baby_woman', isMonster: true, imgBase: '1776676833370.png', imgDeath: 'Gemini_Generated_Image_pz6kztpz6kztpz6k.png', text: '"Помогите моей крошке... Нам некуда идти. Мы просто хотим спать..."', checks: [] },
+            { id: 'h_mage', isMonster: false, imgBase: '1776676249565.png', text: '"Магия посоха укажет путь. Но сегодня мне нужно обычное тепло очага. Впустишь мага?"', checks: [] },
+            { id: 'h_archer', isMonster: false, imgBase: '1776676127035.png', text: '"Стрелы на исходе, глаза устали. Дай передохнуть, я прикрою твой сон с луком в руках. Доверься хранителю времени."', checks: [] },
+            { id: 'h_smoking_gnome', isMonster: false, imgBase: '1776675923780.png', text: '"*Кха-кха*... Есть огонька? Гному нужно перекурить эту бесконечную ночь в безопасности."', checks: [] },
+            { id: 'h_kpop_girl', isMonster: false, imgBase: '1776675721300.png', text: '"Привет! У меня в наушниках к-поп группа, но на улице стало слишком жутко. Можно к тебе?"', checks: [] },
+            
+            // Основные/Старые
+            { id: 'h1', isMonster: false, imgBase: 'Gemini_Generated_Image_hs6fgkhs6fgkhs6f.png', imgHands: 'Gemini_Generated_Image_hej1oihej1oihej1.png', imgHat: 'Gemini_Generated_Image_dcsp14dcsp14dcsp.png', text: '"Впусти, я человек! Могу показать руки или снять шапку."', checks: ['hands', 'hat'] },
+            { id: 'h_girl', isMonster: false, imgBase: '1776671697469.png', text: '"Пожалуйста, я боюсь... Там на улице кто-то ходит."', checks: [] },
+            { id: 'h_gnome', isMonster: false, imgBase: '1776672616935.png', text: '"Я гном из пещер! Нам, маленьким, сейчас тяжелее всего. Пустишь?"', checks: [] },
+            { id: 'h_old_no_teeth', isMonster: false, imgBase: '1776671492652.png', text: '"Зубов нет, кусаться нечем! Старый дед просит крова."', checks: [] },
+            { id: 'h_buff', isMonster: false, imgBase: '1776671377057.png', text: '"Слышь, хозяин. Я крепкий парень, если Излом придет - вдвоем отмахаемся!"', checks: [] },
+            { id: 'h_soldier', isMonster: false, imgBase: '1776637322788.png', text: '"Я военный при исполнении. Нужно переждать ночь. Монстра не подпущу к дому."', checks: [] },
+            { id: 'h_guy', isMonster: false, imgBase: '1776636988431.png', text: '"Йоу, я свой! Видел Излома за углом, пусти скорее!"', checks: [] },
+            { id: 'h_fat', isMonster: false, imgBase: '1776637562012.png', text: '"Ох, отдышаться бы... Пустишь толстяка на постой?"', checks: [] },
+            { id: 'h_old_gl', isMonster: false, imgBase: 'Gemini_Generated_Image_mkjfs1mkjfs1mkjf.png', imgAlt: 'Gemini_Generated_Image_rhvnubrhvnubrhvn.png', text: '"Старый я... Могу очки снять, если подозрительно."', checks: ['glasses'] },
+            { id: 'h_3cxn', isMonster: false, imgBase: 'Gemini_Generated_Image_3cxn4q3cxn4q3cxn.png', text: '"Я обычный парень. Просто хочу пережить этот ад."', checks: [] },
+            
+            // Монстры
+            { id: 'm_gl', isMonster: true, imgBase: 'Gemini_Generated_Image_zhviwwzhviwwzhvi.png', imgAlt: 'Gemini_Generated_Image_s1a9fts1a9fts1a9.png', imgDeath: 'Gemini_Generated_Image_pz6kztpz6kztpz6k.png', text: '"Глаза болят... Очки не сниму. Пустишь?"', checks: ['glasses'] },
+            { id: 'm_granny1', isMonster: true, imgBase: '1776636123150.png', imgDeath: '1776636217836.png', text: '"Привет, Я к тебе пришел... Свежий батончик принес..."', checks: [] },
+            { id: 'm_granny2', isMonster: true, imgBase: '1776636302683.png', imgDeath: '1776636708526.png', text: '"Открой, милок. Погода нынче не для прогулок..."', checks: [] },
+            { id: 'm_creep', isMonster: true, imgBase: '1776636495908.png', imgDeath: '1776636852517.png', text: '"Эй... я тут это... зайти хотел. Покурим?"', checks: [] },
+            { id: 'm_girl_demon', isMonster: true, imgBase: 'Gemini_Generated_Image_lx43k1lx43k1lx43.png', imgDeath: 'Gemini_Generated_Image_64bz6k64bz6k64bz.png', text: '"Помогите... мне холодно..."', checks: [] },
+            { id: 'm_thin', isMonster: true, imgBase: '1776672891700.png', imgDeath: '1776636852517.png', text: '"П-п-пусти... Я... е-едва... г-говорю..."', checks: [] },
+            { id: 'm_woman', isMonster: true, imgBase: '1776672510112.png', imgDeath: '1776636708526.png', text: '"Добрый вечер. Одинокой женщине найдется место?"', checks: [] }
+        ];
+
+        function initQueue() {
+            guestQueue = [...GUESTS_DB].sort(() => Math.random() - 0.5);
+        }
+
+        function spawnGuest() {
+            if (currentDay % 4 === 0) {
+                checkIzlom();
+                return;
+            }
+            if (guestQueue.length === 0) initQueue();
+            currentGuest = guestQueue.pop();
+            showStep(currentGuest.text, currentGuest.imgBase, getOptionsForGuest(currentGuest));
+        }
+
+        function getOptionsForGuest(guest) {
+            let opts = [{ text: "ВПУСТИТЬ", action: "accept" }];
+            if (guest.checks && guest.checks.includes('hands')) opts.push({ text: "РУКИ", action: "checkHands" });
+            if (guest.checks && guest.checks.includes('hat')) opts.push({ text: "ШАПКА", action: "checkHat" });
+            if (guest.checks && guest.checks.includes('glasses')) opts.push({ text: "ОЧКИ", action: "checkGlasses" });
+            opts.push({ text: "ПРОГНАТЬ", action: "reject" });
+            return opts;
+        }
+
+        function showStep(text, img, options) {
+            dialogueText.innerText = text;
+            portrait.style.backgroundImage = `url('${img}')`;
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.innerText = opt.text;
+                b.onclick = () => handleAction(opt.action);
+                optionsContainer.appendChild(b);
+            });
+        }
+
+        function handleAction(action) {
+            if (action === 'accept') {
+                if (currentGuest.isMonster) {
+                    showDeath("Монстр пробрался внутрь. Вы совершили фатальную ошибку.", currentGuest.imgDeath || 'Gemini_Generated_Image_pz6kztpz6kztpz6k.png');
+                } else {
+                    isHomeOccupied = true;
+                    updateStatus("ГОСТЬ ВНУТРИ", "text-blue-500");
+                    nextDay();
+                }
+            } else if (action === 'reject') {
+                isHomeOccupied = false;
+                updateStatus("ОДИНОЧЕСТВО", "text-green-600");
+                nextDay();
+            } else if (action.startsWith('check')) {
+                let nextImg = currentGuest.imgBase;
+                if (action === 'checkHands') nextImg = currentGuest.imgHands;
+                if (action === 'checkHat') nextImg = currentGuest.imgHat;
+                if (action === 'checkGlasses') nextImg = currentGuest.imgAlt;
+                showStep("Ты все увидел? Теперь решай!", nextImg, [
+                    { text: "ВПУСТИТЬ", action: "accept" },
+                    { text: "ПРОГНАТЬ", action: "reject" }
+                ]);
+            }
+        }
+
+        function updateStatus(text, colorClass) {
+            homeStatus.innerText = text;
+            homeStatus.className = `${colorClass} font-black italic text-xl uppercase`;
+        }
+
+        function nextDay() {
+            currentDay++;
+            dayDisplay.innerText = currentDay;
+            optionsContainer.innerHTML = '<div class="text-gray-500 animate-pulse uppercase tracking-widest">Ожидание следующей фазы...</div>';
+            setTimeout(spawnGuest, 1000);
+        }
+
+        function checkIzlom() {
+            dialogueText.innerText = "Четвертая ночь... Тень ложится на порог. Излом дёргает засов двери...";
+            portrait.style.backgroundImage = "url('Gemini_Generated_Image_fge9kxfge9kxfge9.png')";
+            optionsContainer.innerHTML = '<div class="text-red-700 font-black text-6xl animate-pulse tracking-tighter">ИЗЛОМ У ДВЕРИ</div>';
+            
+            setTimeout(() => {
+                if (isHomeOccupied) {
+                    dialogueText.innerText = "Излом чувствует сопротивление. Двое в доме — слишком сложная добыча. Он уходит в темноту.";
+                    isHomeOccupied = false;
+                    updateStatus("ОДИНОЧЕСТВО", "text-green-600");
+                    
+                    const b = document.createElement('button');
+                    b.className = 'btn border-green-700 text-green-500';
+                    b.innerText = "ВСТРЕТИТЬ РАССВЕТ";
+                    b.onclick = nextDay;
+                    optionsContainer.innerHTML = '';
+                    optionsContainer.appendChild(b);
+                } else {
+                    showDeath("Излом зашел в тихий дом. Твой крик захлебнулся в ночной тишине.", "1771547396165.png");
+                }
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
